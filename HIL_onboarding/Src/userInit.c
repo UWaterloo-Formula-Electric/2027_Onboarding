@@ -14,6 +14,8 @@
 #include "bsp.h"
 #include "debug.h"
 #include "hilCli.h"
+#include "uartBus.h"
+#include "i2C_dac.h"
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask,
                                     signed char *pcTaskName )
@@ -26,12 +28,22 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask,
 // before freeRTOS initializes and starts up
 void userInit()
 {
+    /* First light. printf falls through to a polled transmit until the print
+     * task exists, so this lands on the wire before anything below can fail.
+     * If the console is silent from here, the fault is the pins, the baud or
+     * the cable, not the firmware. */
+    printf("\n\nHIL_onboarding booting\n");
+
     /* Should be the first thing initialized, otherwise print will fail */
     if (debugInit() != HAL_OK) {
         Error_Handler();
     }
 
-    if (uartStartReceiving(&DEBUG_UART_HANDLE) != HAL_OK) {
+    if (uartBusInit() != HAL_OK) {
+        Error_Handler();
+    }
+
+    if (i2cDacInit() != HAL_OK) {
         Error_Handler();
     }
 

@@ -31,8 +31,8 @@
 
 /* Peripheral handles ------------------------------------------------------ */
 
-// UART4 is the schematic's debug link but is pinned to floating PA0, see README
-#define DEBUG_UART_HANDLE huart3
+// The schematic's debug link, now pinned to PH13/PH14 with DMA on TX and RX
+#define DEBUG_UART_HANDLE huart4
 
 // Signal injection, broken out to the bench connectors
 #define DAC_HANDLE hdac
