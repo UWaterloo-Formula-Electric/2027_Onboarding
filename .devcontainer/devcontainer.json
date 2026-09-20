@@ -1,0 +1,4 @@
+{
+  "name": "STM32 Onboarding",
+  "image": "ghcr.io/uwaterloo-formula-electric/firmware:latest"
+}
