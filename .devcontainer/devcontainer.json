@@ -1,0 +1,11 @@
+{
+  "name": "UWFE Onboarding Dev Container",
+  "image": "ghcr.io/uwaterloo-formula-electric/uwfe-dev:stable",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools"
+      ]
+    }
+  }
+}
