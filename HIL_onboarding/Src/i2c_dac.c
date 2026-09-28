@@ -40,8 +40,11 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 0U
-#define MCP4728_DAC0 0U
+// DAC1:DAC0 select the channel, 00 is VOUTA, 01 is VOUTB
+#define MCP4728_DAC1_A 0U
+#define MCP4728_DAC0_A 0U
+#define MCP4728_DAC1_B 0U
+#define MCP4728_DAC0_B 1U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -67,29 +70,50 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     //D11:D0 is essentially your code. That is what you are setting.
     //The I2C address is not part of this frame, transmitFrame sends it separately.
 
+    // Channel A (VOUTA)
     frame->bytes[0] = 0U;
     frame->bytes[0]|= (MCP4728_C2 << 7);
     frame->bytes[0]|= (MCP4728_C1 << 6);
     frame->bytes[0]|= (MCP4728_C0 << 5);
     frame->bytes[0]|= (MCP4728_W1 << 4);
     frame->bytes[0]|= (MCP4728_W0 << 3);
-    frame->bytes[0]|= (MCP4728_DAC1 << 2);
-    frame->bytes[0]|= (MCP4728_DAC0 << 1);
+    frame->bytes[0]|= (MCP4728_DAC1_A << 2);
+    frame->bytes[0]|= (MCP4728_DAC0_A << 1);
     frame->bytes[0]|= (MCP4728_UDAC << 0);
-    
+
     frame->bytes[1] = 0U;
-    frame->bytes[1]|= (MCP4728_VREF<< 7);
-    frame->bytes[1]|= (MCP4728_PD1<< 6);
-    frame->bytes[1]|= (MCP4728_PD0<< 5);
-    frame->bytes[1]|= (MCP4728_GX<< 4);
-    frame->bytes[1]|= (code>>8&0x0F);
+    frame->bytes[1]|= (MCP4728_VREF << 7);
+    frame->bytes[1]|= (MCP4728_PD1 << 6);
+    frame->bytes[1]|= (MCP4728_PD0 << 5);
+    frame->bytes[1]|= (MCP4728_GX << 4);
+    frame->bytes[1]|= ((code >> 8) & 0x0F);
 
     frame->bytes[2] = 0U;
-    frame->bytes[2]|=(code&0xFF);
-    
-    frame->length = 3U; 
-    return HAL_OK;
+    frame->bytes[2]|= (code & 0xFF);
 
+    // Channel B (VOUTB)
+    frame->bytes[3] = 0U;
+    frame->bytes[3]|= (MCP4728_C2 << 7);
+    frame->bytes[3]|= (MCP4728_C1 << 6);
+    frame->bytes[3]|= (MCP4728_C0 << 5);
+    frame->bytes[3]|= (MCP4728_W1 << 4);
+    frame->bytes[3]|= (MCP4728_W0 << 3);
+    frame->bytes[3]|= (MCP4728_DAC1_B << 2);
+    frame->bytes[3]|= (MCP4728_DAC0_B << 1);
+    frame->bytes[3]|= (MCP4728_UDAC << 0);
+
+    frame->bytes[4] = 0U;
+    frame->bytes[4]|= (MCP4728_VREF << 7);
+    frame->bytes[4]|= (MCP4728_PD1 << 6);
+    frame->bytes[4]|= (MCP4728_PD0 << 5);
+    frame->bytes[4]|= (MCP4728_GX << 4);
+    frame->bytes[4]|= ((code >> 8) & 0x0F);
+
+    frame->bytes[5] = 0U;
+    frame->bytes[5]|= (code & 0xFF);
+
+    frame->length = 6U;
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
