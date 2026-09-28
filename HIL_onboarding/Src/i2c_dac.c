@@ -91,7 +91,27 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     // Byte 2: low 8 bits of the code (D7:D0)
     frame->bytes[2] = (uint8_t)(code & 0xFFU);
 
-    frame->length = 3U;
+    // Byte 3: command + Channel B select + UDAC
+    frame->bytes[3] = (uint8_t)((MCP4728_C2   << 7U) |
+                                (MCP4728_C1   << 6U) |
+                                (MCP4728_C0   << 5U) |
+                                (MCP4728_W1   << 4U) |
+                                (MCP4728_W0   << 3U) |
+                                (0U            << 2U) | // Channel B: DAC1:DAC0 = 01
+                                (1U            << 1U) |
+                                (MCP4728_UDAC << 0U));
+
+    // Byte 4: config bits + top 4 bits of code
+    frame->bytes[4] = (uint8_t)((MCP4728_VREF << 7U) |
+                                (MCP4728_PD1  << 6U) |
+                                (MCP4728_PD0  << 5U) |
+                                (MCP4728_GX   << 4U) |
+                                ((code >> 8U) & 0x0FU));
+
+    // Byte 5: low 8 bits of code
+    frame->bytes[5] = (uint8_t)(code & 0xFFU);
+
+    frame->length = 6U;
 
     return HAL_OK;
 }
@@ -107,12 +127,12 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
     //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
     //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS
     return HAL_I2C_Master_Transmit(
+            &hi2c1,
             I2C_DAC_ADDRESS7 << 1U,
             (uint8_t *)frame->bytes, 
             frame->length, 
             I2C_DAC_TIMEOUT_MS);
 
-    return HAL_ERROR;
 }
 
 static HAL_StatusTypeDef activateDAC(void)
