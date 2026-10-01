@@ -57,12 +57,12 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOJ, GPIO5V_2_Pin|GPIO5V_1_Pin|GPIO12V_9_Pin|GPIO12V_8_Pin
-                          |GPIO12V_7_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10|GPIO12V_6_Pin|GPIO12V_5_Pin|GPIO12V_4_Pin
+                          |GPIO12V_3_Pin|GPIO12V_2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPIO12V_6_Pin|GPIO12V_5_Pin|GPIO12V_4_Pin|GPIO12V_3_Pin
-                          |GPIO12V_2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOJ, GPIO5V_2_Pin|GPIO5V_1_Pin|GPIO12V_9_Pin|GPIO12V_8_Pin
+                          |GPIO12V_7_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIO12V_1_GPIO_Port, GPIO12V_1_Pin, GPIO_PIN_RESET);
@@ -73,6 +73,15 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, GPIO3V_5_Pin|GPIO3V_6_Pin|GPIO3V_7_Pin|GPIO3V_8_Pin
                           |GPIO3V_9_Pin|GPIO3V_10_Pin|GPIO3V_11_Pin|GPIO3V_12_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : PF10 GPIO12V_6_Pin GPIO12V_5_Pin GPIO12V_4_Pin
+                           GPIO12V_3_Pin GPIO12V_2_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO12V_6_Pin|GPIO12V_5_Pin|GPIO12V_4_Pin
+                          |GPIO12V_3_Pin|GPIO12V_2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pins : GPIO5V_8_Pin GPIO5V_7_Pin GPIO3V_13_Pin */
   GPIO_InitStruct.Pin = GPIO5V_8_Pin|GPIO5V_7_Pin|GPIO3V_13_Pin;
@@ -100,15 +109,6 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOJ, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : GPIO12V_6_Pin GPIO12V_5_Pin GPIO12V_4_Pin GPIO12V_3_Pin
-                           GPIO12V_2_Pin */
-  GPIO_InitStruct.Pin = GPIO12V_6_Pin|GPIO12V_5_Pin|GPIO12V_4_Pin|GPIO12V_3_Pin
-                          |GPIO12V_2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /*Configure GPIO pin : GPIO12V_1_Pin */
   GPIO_InitStruct.Pin = GPIO12V_1_Pin;
