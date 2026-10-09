@@ -19,6 +19,7 @@
 #include "debug.h"
 #include "i2c.h"
 #include "i2cBus.h"
+#include "stm32f769xx.h"
 
 #define I2C_DAC_TIMEOUT_MS 15
 
@@ -40,8 +41,10 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 ???
-#define MCP4728_DAC0 ???
+#define MCP4728_CHA_DAC1 0U
+#define MCP4728_CHA_DAC0 0U
+#define MCP4728_CHB_DAC1 0U
+#define MCP4728_CHB_DAC0 1U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -53,64 +56,91 @@ typedef struct {
     uint16_t length;
 } I2cDacFrame_t;
 
-static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
-{
+static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame) {
     if (code > I2C_DAC_CODE_MAX || frame == NULL) {
         return HAL_ERROR;
     }
 
     frame->length = 0U;
 
-    // TODO: Construct an MCP4728 Multi-Write frame from the named fields and code.
-    // Look at the top for a bunch of defined variables.
-    //Analog voltage is mapped to code by taking the equation V_out = (code / 4096) * V_ref.
-    //D11:D0 is essentially your code. That is what you are setting.
-    //The I2C address is not part of this frame, transmitFrame sends it separately.
+    frame->bytes[0] = (uint8_t) (
+        (MCP4728_C2 << 7) |
+        (MCP4728_C1 << 6) |
+        (MCP4728_C0 << 5) |
+        (MCP4728_W1 << 4) |
+        (MCP4728_W0 << 3) |
+        (MCP4728_CHA_DAC1 << 2) |
+        (MCP4728_CHA_DAC0 << 1) |
+        MCP4728_UDAC
+    );
 
-    frame->bytes[0];
-    frame->bytes[1];
-    frame->bytes[2];
-    frame->bytes[3];
-    frame->bytes[4];
-    frame->bytes[5];
-    frame->bytes[6];
-    frame->length = 7U;
-    return HAL_ERROR;
+    frame->bytes[1] = (uint8_t) (
+        (MCP4728_VREF << 7) |
+        (MCP4728_PD1 << 6) |
+        (MCP4728_PD0 << 5) |
+        (MCP4728_GX << 4) |
+        ((code >> 8) & 0x0FU)
+    );
+    //
+    frame->bytes[2] = (uint8_t) (code & 0xFFU);
+
+
+    frame->bytes[3] = (uint8_t) (
+        (MCP4728_C2 << 7) |
+        (MCP4728_C1 << 6) |
+        (MCP4728_C0 << 5) |
+        (MCP4728_W1 << 4) |
+        (MCP4728_W0 << 3) |
+        (MCP4728_CHB_DAC1 << 2) |
+        (MCP4728_CHB_DAC0 << 1) |
+        MCP4728_UDAC
+    );
+
+    frame->bytes[4] = (uint8_t) (
+        (MCP4728_VREF << 7) |
+        (MCP4728_PD1 << 6) |
+        (MCP4728_PD0 << 5) |
+        (MCP4728_GX << 4) |
+        ((code >> 8) & 0x0FU)
+    );
+    //
+    frame->bytes[5] = (uint8_t) (code & 0xFFU);
+
+    frame->length = 6U;
+    return HAL_OK;
 }
 
-static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
-{
+static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame) {
     if (frame == NULL || frame->length == 0U) {
         return HAL_ERROR;
     }
 
-    // TODO: Send frame->bytes to the DAC at I2C_DAC_ADDRESS7 on I2C_DAC_BUS.
-    //use hi2c1 to send the frame
-    //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
-    //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
 
-    return HAL_ERROR;
+    return HAL_I2C_Master_Transmit(&hi2c1, (I2C_DAC_ADDRESS7 << 1), (uint8_t *) (frame->bytes), frame->length,
+                                   I2C_DAC_TIMEOUT_MS);
 }
 
-static HAL_StatusTypeDef activateDAC(void)
-{
+static HAL_StatusTypeDef activateDAC(void) {
     // TODO: To activate the DAC, we need to strobe PF10. First you need to go into
     // CubeMX and check the GPIO for PF10 is enabled as an output.
     //TIP: look up HAL_GPIO_WritePin, and see T_LDAC_MS above for the hold time.
     //LDAC is active low, so work out which level does what, and what state the
     //pin should be left in for the next write.
 
-    // assert
 
+    // void HAL_GPIO_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState)
+    // {
+
+    // // assert
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
     // wait
-
+    HAL_Delay(T_LDAC_MS);
     // release
-
-    return HAL_ERROR;
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
+    return HAL_OK;
 }
 
-HAL_StatusTypeDef i2cDacInit(void)
-{
+HAL_StatusTypeDef i2cDacInit(void) {
     // CubeMX drives PF10 low at reset, and a low LDAC makes the DAC latch every
     // write at its last acknowledge, which defeats the UDAC bit the frames set.
     // Park it high so the first transfer defers like every later one.
@@ -119,27 +149,24 @@ HAL_StatusTypeDef i2cDacInit(void)
     return HAL_OK;
 }
 
-HAL_StatusTypeDef i2cDacProbe(void)
-{
+HAL_StatusTypeDef i2cDacProbe(void) {
     // i2cBus wants the 7 bit address already shifted up for the R/W bit
     return i2cIsDeviceReady(I2C_DAC_BUS, I2C_DAC_ADDRESS7 << 1U);
 }
 
-HAL_StatusTypeDef i2cDacSetMillivolts(uint16_t millivolts)
-{
+HAL_StatusTypeDef i2cDacSetMillivolts(uint16_t millivolts) {
     uint32_t code;
 
     if (millivolts >= I2C_DAC_FULL_SCALE_MV) {
         return HAL_ERROR;
     }
 
-    code = ((uint32_t)millivolts * I2C_DAC_CODE_COUNT) / I2C_DAC_FULL_SCALE_MV;
+    code = ((uint32_t) millivolts * I2C_DAC_CODE_COUNT) / I2C_DAC_FULL_SCALE_MV;
 
-    return i2cDacSetCode((uint16_t)code);
+    return i2cDacSetCode((uint16_t) code);
 }
 
-HAL_StatusTypeDef i2cDacSetCode(uint16_t code)
-{
+HAL_StatusTypeDef i2cDacSetCode(uint16_t code) {
     I2cDacFrame_t frame;
 
     if (buildOutputFrame(code, &frame) != HAL_OK) {
