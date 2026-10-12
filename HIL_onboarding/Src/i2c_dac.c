@@ -40,8 +40,8 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 ???
-#define MCP4728_DAC0 ???
+#define MCP4728_DAC1 0U
+#define MCP4728_DAC0 0U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -50,14 +50,14 @@
 
 typedef struct {
     uint8_t bytes[I2C_DAC_FRAME_MAX_LENGTH];
-    uint16_t length;
+uint16_t length;
 } I2cDacFrame_t;
 
 static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
 {
     if (code > I2C_DAC_CODE_MAX || frame == NULL) {
         return HAL_ERROR;
-    }
+    }   
 
     frame->length = 0U;
 
@@ -66,16 +66,21 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     //Analog voltage is mapped to code by taking the equation V_out = (code / 4096) * V_ref.
     //D11:D0 is essentially your code. That is what you are setting.
     //The I2C address is not part of this frame, transmitFrame sends it separately.
+    
+    // this block gets sent to channel A
+    frame->bytes[0] = (MCP4728_C2 << 7U) | (MCP4728_C1 << 6U) | (MCP4728_C0 << 5U) | (MCP4728_W1 << 4U) | (MCP4728_W0 << 3U) | (MCP4728_DAC1 << 2U) | (MCP4728_DAC0 << 1U) | (MCP4728_UDAC << 0U);
+    frame->bytes[1] = (MCP4728_VREF << 7U) | (MCP4728_PD1 << 6U) | (MCP4728_PD0 << 5U) | (MCP4728_GX << 4U) | (((code >> 11U) & 1U) << 3U) | (((code >> 10U) & 1U) << 2U) | (((code >> 9U) & 1U) << 1U) | (((code >> 8U) & 1U) << 0U);
+    frame->bytes[2] = (((code >> 7U) & 1U) << 7U) | (((code >> 6U) & 1U) << 6U) | (((code >> 5U) & 1U) << 5U) | (((code >> 4U) & 1U) << 4U) | (((code >> 3U) & 1U) << 3U) | (((code >> 2U) & 1U) << 2U) | (((code >> 1U) & 1U) << 1U) | (code & 1U);
 
-    frame->bytes[0];
-    frame->bytes[1];
-    frame->bytes[2];
-    frame->bytes[3];
-    frame->bytes[4];
-    frame->bytes[5];
-    frame->bytes[6];
-    frame->length = 7U;
-    return HAL_ERROR;
+    // the rest is sent to channel B
+    frame->bytes[3] = (MCP4728_C2 << 7U) | (MCP4728_C1 << 6U) | (MCP4728_C0 << 5U) | (MCP4728_W1 << 4U) | (MCP4728_W0 << 3U) | (MCP4728_DAC1 << 2U) | (MCP4728_DAC0 + 1 << 1U) | (MCP4728_UDAC << 0U);
+    frame->bytes[4] = (MCP4728_VREF << 7U) | (MCP4728_PD1 << 6U) | (MCP4728_PD0 << 5U) | (MCP4728_GX << 4U) | (((code >> 11U) & 1U) << 3U) | (((code >> 10U) & 1U) << 2U) | (((code >> 9U) & 1U) << 1U) | (((code >> 8U) & 1U) << 0U);
+    frame->bytes[5] =(((code >> 7U) & 1U) << 7U) | (((code >> 6U) & 1U) << 6U) | (((code >> 5U) & 1U) << 5U) | (((code >> 4U) & 1U) << 4U) | (((code >> 3U) & 1U) << 3U) | (((code >> 2U) & 1U) << 2U) | (((code >> 1U) & 1U) << 1U) | (code & 1U);
+
+    frame->length = 6U;
+
+    // frame->length = 7U; why is the length 7? we only need 6 because I2C address gets sent separately
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
@@ -84,12 +89,18 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
         return HAL_ERROR;
     }
 
+    return HAL_I2C_Master_Transmit(
+        &hi2c1,
+        (I2C_DAC_ADDRESS7 << 1U),
+        frame->bytes,
+        frame->length,
+        I2C_DAC_TIMEOUT_MS
+    );
+
     // TODO: Send frame->bytes to the DAC at I2C_DAC_ADDRESS7 on I2C_DAC_BUS.
     //use hi2c1 to send the frame
     //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
     //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
-
-    return HAL_ERROR;
 }
 
 static HAL_StatusTypeDef activateDAC(void)
@@ -101,12 +112,16 @@ static HAL_StatusTypeDef activateDAC(void)
     //pin should be left in for the next write.
 
     // assert
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
 
     // wait
+    vTaskDelay(pdMS_TO_TICKS(T_LDAC_MS));
 
     // release
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
 
-    return HAL_ERROR;
+    return HAL_OK;
+
 }
 
 HAL_StatusTypeDef i2cDacInit(void)
