@@ -40,18 +40,60 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 0U
-#define MCP4728_DAC0 0U
+
+#define MCP4728_DAC1_CH_A 0U
+#define MCP4728_DAC0_CH_A 0U
+#define MCP4728_DAC1_CH_B 0U
+#define MCP4728_DAC0_CH_B 1U
+
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
 #define MCP4728_PD0 0U
 #define MCP4728_GX 0U
 
+#define MCP4728_BYTES_PER_CHANNEL 3U
+
 typedef struct {
     uint8_t bytes[I2C_DAC_FRAME_MAX_LENGTH];
     uint16_t length;
 } I2cDacFrame_t;
+
+// This function appends a single multi write entry from bytes 2 to 4, for the
+// channel picked by dac1 and dac0
+static HAL_StatusTypeDef appendChannel(I2cDacFrame_t *frame, uint8_t dac1,
+                                       uint8_t dac0, uint16_t code)
+{
+    uint16_t i = frame->length;
+
+    if (i + MCP4728_BYTES_PER_CHANNEL > I2C_DAC_FRAME_MAX_LENGTH) {
+        return HAL_ERROR;
+    }
+
+    // Command byte: C2 C1 C0 W1 W0 DAC1 DAC0 UDAC
+    frame->bytes[i++] = (uint8_t)((MCP4728_C2 << 7U) |
+                                  (MCP4728_C1 << 6U) |
+                                  (MCP4728_C0 << 5U) |
+                                  (MCP4728_W1 << 4U) |
+                                  (MCP4728_W0 << 3U) |
+                                  (dac1 << 2U) |
+                                  (dac0 << 1U) |
+                                  MCP4728_UDAC);
+
+    // Upper data byte: VREF PD1 PD0 Gx D11 D10 D9 D8
+    frame->bytes[i++] = (uint8_t)((MCP4728_VREF << 7U) |
+                                  (MCP4728_PD1 << 6U) |
+                                  (MCP4728_PD0 << 5U) |
+                                  (MCP4728_GX << 4U) |
+                                  ((code >> 8U) & 0x0FU));
+
+    // Lower data byte: D7 to D0
+    frame->bytes[i++] = (uint8_t)(code & 0xFFU);
+
+    frame->length = i;
+
+    return HAL_OK;
+}
 
 static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
 {
@@ -64,42 +106,28 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     // HAL sends the I2C address separately; this frame begins with the MCP4728
     // Multi-Write command byte.
 
-    frame->bytes[0] = (MCP4728_C2 << 7U) |
-                      (MCP4728_C1 << 6U) |
-                      (MCP4728_C0 << 5U) |
-                      (MCP4728_W1 << 4U) |
-                      (MCP4728_W0 << 3U) |
-                      (MCP4728_DAC1 << 2U) |
-                      (MCP4728_DAC0 << 1U) |
-                      MCP4728_UDAC;
+    if (appendChannel(frame, MCP4728_DAC1_CH_A, MCP4728_DAC0_CH_A, code) != HAL_OK) {
+        return HAL_ERROR;
+    }
 
-    frame->bytes[1] = (MCP4728_VREF << 7U) |
-                      (MCP4728_PD1 << 6U) |
-                      (MCP4728_PD0 << 5U) |
-                      (MCP4728_GX << 4U) |
-                      ((code >> 8U) & 0x0FU);
-
-    frame->bytes[2] = code & 0xFFU;
-    frame->bytes[3] = frame->bytes[0] | (1U << 1U);
-    frame->bytes[4] = frame->bytes[1];
-    frame->bytes[5] = frame-> bytes[2];
-
-    frame -> length = 6U;
+    if (appendChannel(frame, MCP4728_DAC1_CH_B, MCP4728_DAC0_CH_B, code) != HAL_OK) {
+        return HAL_ERROR;
+    }
 
     return HAL_OK;
 }
 
-static HAL_StatusTypeDef transmitFrame(I2cDacFrame_t *frame)
+static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
 {
     if (frame == NULL || frame->length == 0U) {
         return HAL_ERROR;
     }
 
     return HAL_I2C_Master_Transmit(&hi2c1,
-                                    I2C_DAC_ADDRESS7 << 1U,
-                                    frame->bytes,
-                                    frame->length,
-                                    I2C_DAC_TIMEOUT_MS);
+                                   I2C_DAC_ADDRESS7 << 1U,
+                                   (uint8_t *)frame->bytes,
+                                   frame->length,
+                                   I2C_DAC_TIMEOUT_MS);
 }
 
 static HAL_StatusTypeDef activateDAC(void)
