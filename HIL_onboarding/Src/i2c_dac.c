@@ -89,7 +89,6 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
     //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
     //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
     HAL_I2C_Master_Transmit(&hi2c1, (I2C_DAC_ADDRESS7 << 1), frame->bytes, frame->length, I2C_DAC_TIMEOUT_MS);
-    return HAL_ERROR;
 }
 
 static HAL_StatusTypeDef activateDAC(void)
@@ -108,7 +107,7 @@ static HAL_StatusTypeDef activateDAC(void)
 
     // release
     HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
-    return HAL_ERROR;
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef i2cDacInit(void)
