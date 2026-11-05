@@ -40,8 +40,10 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 ???
-#define MCP4728_DAC0 ???
+#define MCP4728_ChannelA_DAC1 0U
+#define MCP4728_ChannelA_DAC0 0U
+#define MCP4728_ChannelB_DAC1 0U
+#define MCP4728_ChannelB_DAC0 1U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -67,15 +69,14 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     //D11:D0 is essentially your code. That is what you are setting.
     //The I2C address is not part of this frame, transmitFrame sends it separately.
 
-    frame->bytes[0];
-    frame->bytes[1];
-    frame->bytes[2];
-    frame->bytes[3];
-    frame->bytes[4];
-    frame->bytes[5];
-    frame->bytes[6];
-    frame->length = 7U;
-    return HAL_ERROR;
+    frame->bytes[0] = (MCP4728_C2 << 7) | (MCP4728_C1 << 6) | (MCP4728_C0 << 5) | (MCP4728_W1 << 4) | (MCP4728_W0 << 3) | (MCP4728_ChannelA_DAC1 << 2) | (MCP4728_ChannelA_DAC0 << 1) | (MCP4728_UDAC);
+    frame->bytes[1] = (MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | ((code >> 8) & 0x0F);
+    frame->bytes[2] = (code & 0xFFU);
+    frame->bytes[3] = (0u << 7) | (0u << 6) | (0u << 5) | (0u << 4) | (0u << 3) | (MCP4728_ChannelB_DAC1 << 2) | (MCP4728_ChannelB_DAC0 << 1) | (MCP4728_UDAC);
+    frame->bytes[4] = (MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | ((code >> 8) & 0x0F);
+    frame->bytes[5] = (code & 0xFFU);
+    frame->length = 6U;
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
@@ -88,8 +89,7 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
     //use hi2c1 to send the frame
     //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
     //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
-
-    return HAL_ERROR;
+    HAL_I2C_Master_Transmit(&hi2c1, (I2C_DAC_ADDRESS7 << 1), frame->bytes, frame->length, I2C_DAC_TIMEOUT_MS);
 }
 
 static HAL_StatusTypeDef activateDAC(void)
@@ -101,12 +101,14 @@ static HAL_StatusTypeDef activateDAC(void)
     //pin should be left in for the next write.
 
     // assert
-
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
+    
     // wait
+    HAL_Delay(T_LDAC_MS);
 
     // release
-
-    return HAL_ERROR;
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef i2cDacInit(void)
