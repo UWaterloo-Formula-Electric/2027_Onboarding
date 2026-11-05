@@ -41,8 +41,10 @@
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
 //channel A and B's DAC according to datasheet
-#define MCP4728_DAC1 0U
-#define MCP4728_DAC0 0U
+#define MCP4728_DAC1A 0U
+#define MCP4728_DAC0A 0U
+#define MCP4728_DAC1B 0U
+#define MCP4728_DAC0B 1U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -80,8 +82,8 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
                       (MCP4728_C0 << 5) |
                       (MCP4728_W1 << 4) |
                       (MCP4728_W0 << 3) | 
-                      (MCP4728_DAC1 << 2) | 
-                      (MCP4728_DAC0 << 1) | 
+                      (MCP4728_DAC1A << 2) | 
+                      (MCP4728_DAC0A << 1) | 
                       (MCP4728_UDAC << 0);
 
     frame->bytes[1] = (MCP4728_VREF << 7) |
@@ -92,8 +94,8 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
 
     frame->bytes[2] = code & 0xFF;
 
-    frame->bytes[3] = (MCP4728_DAC1 << 2) | 
-                      (MCP4728_DAC0 << 1) | 
+    frame->bytes[3] = (MCP4728_DAC1B << 2) | 
+                      (MCP4728_DAC0B << 1) | 
                       (MCP4728_UDAC << 0);
 
     frame->bytes[4] = (MCP4728_VREF << 7) |
