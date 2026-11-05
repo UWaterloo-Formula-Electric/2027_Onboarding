@@ -75,7 +75,7 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     frame->bytes[5] = (MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | ((code >> 8) & 0x0F);
     frame->bytes[6] = (code & 0xFFU);
     frame->length = 7U;
-    return HAL_ERROR;
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
