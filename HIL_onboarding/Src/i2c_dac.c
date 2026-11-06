@@ -84,17 +84,17 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
         return HAL_ERROR;
     }
 
-    // TODO: Send frame->bytes to the DAC at I2C_DAC_ADDRESS7 on I2C_DAC_BUS.
-    //use hi2c1 to send the frame
-    //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
-    //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
 
-    return HAL_ERROR;
+    // Send the frame to the DAC on I2C1. HAL adds the address byte itself,
+    // so the 7-bit address is shifted left to leave room for the read/write bit.
+    // Cast drops const: HAL only reads pData during a transmit.
+    return HAL_I2C_Master_Transmit(&hi2c1, I2C_DAC_ADDRESS7 << 1U,
+                                   (uint8_t *)frame->bytes, frame->length,
+                                   I2C_DAC_TIMEOUT_MS);
 }
-
 static HAL_StatusTypeDef activateDAC(void)
 {
-    // Pulse PF10 Low, then back High
+    // Pulse PF10 Low "Go", Waiting a few millisceonds for it to register, then back High "Rest"
     HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
     HAL_Delay(T_LDAC_MS);
     HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
