@@ -11,7 +11,7 @@
   ******************************************************************************
   */
 
-#include "i2C_dac.h"
+#include "i2c_dac.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -94,19 +94,12 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
 
 static HAL_StatusTypeDef activateDAC(void)
 {
-    // TODO: To activate the DAC, we need to strobe PF10. First you need to go into
-    // CubeMX and check the GPIO for PF10 is enabled as an output.
-    //TIP: look up HAL_GPIO_WritePin, and see T_LDAC_MS above for the hold time.
-    //LDAC is active low, so work out which level does what, and what state the
-    //pin should be left in for the next write.
+    // Pulse PF10 Low, then back High
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
+    HAL_Delay(T_LDAC_MS);
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
 
-    // assert
-
-    // wait
-
-    // release
-
-    return HAL_ERROR;
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef i2cDacInit(void)
