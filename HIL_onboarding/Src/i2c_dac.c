@@ -60,20 +60,19 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     }
 
     frame->length = 0U;
-
-    // TODO: Construct an MCP4728 Multi-Write frame from the named fields and code.
-    // Look at the top for a bunch of defined variables.
-    //Analog voltage is mapped to code by taking the equation V_out = (code / 4096) * V_ref.
-    //D11:D0 is essentially your code. That is what you are setting.
-    //The I2C address is not part of this frame, transmitFrame sends it separately.
-
+    // MCP4728 Multi-Write (datasheet 5.6.2): 3 bytes per channel, channel A then B.
+    //   [0] command (0b01000) | channel select | UDAC
+    //   [1] VREF | PD1 | PD0 | GX | D11-D8
+    //   [2] D7-D0
+    // UDAC = 1 so neither channel updates until activateDAC pulses LDAC.
+    // The address byte isn't included; HAL sends it in transmitFrame.
     frame->bytes[0] = (MCP4728_C2 << 7U) | (MCP4728_C1 << 6U) | (MCP4728_C0 << 5U) |
                       (MCP4728_W1 << 4U) | (MCP4728_W0 << 3U) | (MCP4728_DAC1 << 2U) |
                       (MCP4728_DAC0 << 1U) | MCP4728_UDAC;
     frame->bytes[1] = (MCP4728_VREF << 7U) | (MCP4728_PD1 << 6U) | (MCP4728_PD0 << 5U) |
                       (MCP4728_GX << 4U) | ((code >> 8U) & 0x0FU);
     frame->bytes[2] = (uint8_t)(code & 0xFFU);
-    frame->bytes[3] = frame->bytes[0] | (1u << 1U); // Set DAC0 bit for the second DAC
+    frame->bytes[3] = frame->bytes[0] | (1U << 1U); // Set DAC0 bit for the second DAC
     frame->bytes[4] = frame->bytes[1];
     frame->bytes[5] = frame->bytes[2];
     frame->length = 6U;
@@ -97,7 +96,7 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
 
 static HAL_StatusTypeDef activateDAC(void)
 {
-    // Pulse PF10 Low "Go", Waiting a few millisceonds for it to register, then back High "Rest"
+    // Pulse LDAC (PF10) low to latch both channels at once, hold 1 ms, then back high to rest
     HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
     HAL_Delay(T_LDAC_MS);
     HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
