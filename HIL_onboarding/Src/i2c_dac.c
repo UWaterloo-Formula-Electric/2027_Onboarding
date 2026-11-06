@@ -40,8 +40,8 @@
 #define MCP4728_C0 0U
 #define MCP4728_W1 0U
 #define MCP4728_W0 0U
-#define MCP4728_DAC1 ???
-#define MCP4728_DAC0 ???
+#define MCP4728_DAC1 0U
+#define MCP4728_DAC0 0U
 #define MCP4728_UDAC 1U
 #define MCP4728_VREF 0U
 #define MCP4728_PD1 0U
@@ -67,15 +67,17 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     //D11:D0 is essentially your code. That is what you are setting.
     //The I2C address is not part of this frame, transmitFrame sends it separately.
 
-    frame->bytes[0];
-    frame->bytes[1];
-    frame->bytes[2];
-    frame->bytes[3];
-    frame->bytes[4];
-    frame->bytes[5];
-    frame->bytes[6];
-    frame->length = 7U;
-    return HAL_ERROR;
+    frame->bytes[0] = (MCP4728_C2 << 7U) | (MCP4728_C1 << 6U) | (MCP4728_C0 << 5U) |
+                      (MCP4728_W1 << 4U) | (MCP4728_W0 << 3U) | (MCP4728_DAC1 << 2U) |
+                      (MCP4728_DAC0 << 1U) | MCP4728_UDAC;
+    frame->bytes[1] = (MCP4728_VREF << 7U) | (MCP4728_PD1 << 6U) | (MCP4728_PD0 << 5U) |
+                      (MCP4728_GX << 4U) | ((code >> 8U) & 0x0FU);
+    frame->bytes[2] = (uint8_t)(code & 0xFFU);
+    frame->bytes[3] = frame->bytes[0] | (1u << 1U); // Set DAC0 bit for the second DAC
+    frame->bytes[4] = frame->bytes[1];
+    frame->bytes[5] = frame->bytes[2];
+    frame->length = 6U;
+    return HAL_OK;
 }
 
 static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
@@ -92,6 +94,7 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
                                    (uint8_t *)frame->bytes, frame->length,
                                    I2C_DAC_TIMEOUT_MS);
 }
+
 static HAL_StatusTypeDef activateDAC(void)
 {
     // Pulse PF10 Low "Go", Waiting a few millisceonds for it to register, then back High "Rest"
