@@ -63,7 +63,6 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
 
     frame->length = 0U;
 
-    // Command byte: Multi-Write, Channel A, UDAC = 1
     frame->bytes[0] =
         (MCP4728_C2 << 7U) |
         (MCP4728_C1 << 6U) |
@@ -87,8 +86,13 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
 
     // Select Channel B, retain UDAC = 1
     frame->bytes[3] =
-        (0U << 2U) | // DAC1
-        (1U << 1U) | // DAC0
+        (MCP4728_C2 << 7U) |
+        (MCP4728_C1 << 6U) |
+        (MCP4728_C0 << 5U) |
+        (MCP4728_W1 << 4U) |
+        (MCP4728_W0 << 3U) |
+        (0U << 2U) |
+        (1U << 1U) |
         MCP4728_UDAC;
 
     // Channel B configuration + upper 4 bits
