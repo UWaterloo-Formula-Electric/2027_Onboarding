@@ -69,14 +69,13 @@ static HAL_StatusTypeDef buildOutputFrame(uint16_t code, I2cDacFrame_t *frame)
     //D11:D0 is essentially your code. That is what you are setting.
     //The I2C address is not part of this frame, transmitFrame sends it separately.
 
-    frame->bytes[0] = (uint8_t)I2C_DAC_ADDRESS7;
-    frame->bytes[1] = (uint8_t)((MCP4728_C2 << 7) | (MCP4728_C1 << 6) | (MCP4728_C0 << 5) | (MCP4728_W1 << 4) | (MCP4728_W0 << 3) | (MCP4728_CHA_DAC1 << 2) | (MCP4728_CHA_DAC0 << 1) | (MCP4728_UDAC << 0));
-    frame->bytes[2] = (uint8_t)((MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | (code >> 8)); 
-    frame->bytes[3] = (uint8_t)(code);
-    frame->bytes[4] = (uint8_t)((MCP4728_C2 << 7) | (MCP4728_C1 << 6) | (MCP4728_C0 << 5) | (MCP4728_W1 << 4) | (MCP4728_W0 << 3) | (MCP4728_CHB_DAC1 << 2) | (MCP4728_CHB_DAC0 << 1) | (MCP4728_UDAC << 0));
-    frame->bytes[5] = (uint8_t)((MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | (code >> 8));
-    frame->bytes[6] = (uint8_t)(code);
-    frame->length = 7U;
+    frame->bytes[0] = (uint8_t)((MCP4728_C2 << 7) | (MCP4728_C1 << 6) | (MCP4728_C0 << 5) | (MCP4728_W1 << 4) | (MCP4728_W0 << 3) | (MCP4728_CHA_DAC1 << 2) | (MCP4728_CHA_DAC0 << 1) | (MCP4728_UDAC << 0));
+    frame->bytes[1] = (uint8_t)((MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | (code >> 8)); 
+    frame->bytes[2] = (uint8_t)(code);
+    frame->bytes[3] = (uint8_t)((MCP4728_C2 << 7) | (MCP4728_C1 << 6) | (MCP4728_C0 << 5) | (MCP4728_W1 << 4) | (MCP4728_W0 << 3) | (MCP4728_CHB_DAC1 << 2) | (MCP4728_CHB_DAC0 << 1) | (MCP4728_UDAC << 0));
+    frame->bytes[4] = (uint8_t)((MCP4728_VREF << 7) | (MCP4728_PD1 << 6) | (MCP4728_PD0 << 5) | (MCP4728_GX << 4) | (code >> 8));
+    frame->bytes[5] = (uint8_t)(code);
+    frame->length = 6U;
     return HAL_OK;
 }
 
@@ -91,7 +90,7 @@ static HAL_StatusTypeDef transmitFrame(const I2cDacFrame_t *frame)
     //TIP: look up HAL_I2C_Master_Transmit. It sends the address byte itself and
     //wants the 7 bit address shifted left by one. Use I2C_DAC_TIMEOUT_MS.
 
-    return HAL_I2C_Master_Transmit(&hi2c1, I2C_DAC_ADDRESS7 << 1U, (uint8_t *) frame->bytes, frame->length, I2C_DAC_TIMEOUT_MS );
+    return HAL_I2C_Master_Transmit(&I2C_1_HANDLE, I2C_DAC_ADDRESS7 << 1U, (uint8_t *) frame->bytes, frame->length, I2C_DAC_TIMEOUT_MS );
 }
 
 static HAL_StatusTypeDef activateDAC(void)
