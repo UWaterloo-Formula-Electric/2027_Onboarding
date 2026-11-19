@@ -103,12 +103,15 @@ static HAL_StatusTypeDef activateDAC(void)
     //pin should be left in for the next write.
 
     // assert
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_RESET);
 
     // wait
+    vTaskDelay(pdMS_TO_TICKS(T_LDAC_MS));
 
     // release
+    HAL_GPIO_WritePin(GPIOF, GPIO_PIN_10, GPIO_PIN_SET);
 
-    return HAL_ERROR;
+    return HAL_OK;
 }
 
 HAL_StatusTypeDef i2cDacInit(void)
